@@ -1,27 +1,40 @@
 services:
-  # Redis Server
+ # Redis DB
   redis:
     image: redis:7-alpine
     container_name: redis_server
-    restart: always
+    command: redis-server --requirepass password@123
     ports:
       - "6379:6379"
-    # RedisInsight with defaults
-    command: redis-server --requirepass yourpassword
     volumes:
       - redis_data:/data
 
-  # Redis Dashboard (RedisInsight)
-  redisinsight:
+  #  RedisInsight Dashboard Service
+  redis_insight:
     image: redis/redisinsight:latest
-    container_name: redis_dashboard
-    restart: always
+    container_name: redis_insight
     ports:
-      # Map host 8001 to container port 5540
-      - "8001:5540"
-    volumes:
-      - redisinsight_data:/data
+      - "5540:5540"
+    restart: always
+ # Application end points
+  api:
+    build: .
+    container_name: api_service
+    ports:
+      - "3000:3000"
+    environment:
+      - REDIS_URL=redis://:password@123@redis:6379
+    depends_on:
+      - redis
+ # node workers
+  worker:
+    build: .
+    container_name: worker_service
+    command: npm run start:worker
+    environment:
+      - REDIS_URL=redis://:password@123@redis:6379
+    depends_on:
+      - redis
 
 volumes:
   redis_data:
-  redisinsight_data:

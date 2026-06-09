@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq';
-import { jobsProcessedTotal, jobProcessingTime } from './lib/metrics';
-import { bullMqConnection } from './lib/caseDbType';
+import { jobsProcessedTotal, jobProcessingTime } from './lib/metrics.js';
+import { bullMqConnection } from './lib/caseDbType.js';
 
 // Yield the loop to prevent "Stalled Job" errors
 const yieldLoop = () => new Promise(resolve => setImmediate(resolve));
