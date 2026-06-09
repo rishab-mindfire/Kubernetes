@@ -25,5 +25,7 @@ COPY --from=builder /app/dist ./dist
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 USER appuser
 
-EXPOSE 3000
+ENV REDIS_URL=redis://:password@123@redis:6379
+
+EXPOSE 3001
 CMD ["npm", "run", "start:api"]
