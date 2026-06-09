@@ -8,8 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "prebuild": "rimraf dist",
     "build": "npm run prebuild && tsc",
-    "dev:api": "cross-env PORT=3000 tsx watch src/api.ts",
-    "dev:worker": "tsx watch src/worker.ts",
+    "dev:api": "nodemon --watch src --ext ts --exec \"tsx src/api.ts\"",
+    "dev:worker": "nodemon --watch src --ext ts --exec \"tsx src/worker.ts\"",
     "start:api": "node dist/api.js",
     "start:worker": "node dist/worker.js",
     "prepare": "husky || true"
