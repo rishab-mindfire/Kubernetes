@@ -5,7 +5,7 @@ import { jobsProcessedTotal, jobProcessingTime } from './lib/metrics';
 const worker = new Worker('math-tasks', async (job) => {
   const start = Date.now();
 
-  // CPU intensive logic
+  // CPU intensive work prime number
   const limit = job.data.limit;
   const primes = [];
   for (let i = 2; i < limit; i++) {
