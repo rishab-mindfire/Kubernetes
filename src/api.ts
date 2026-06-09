@@ -1,7 +1,7 @@
 import express from 'express';
 import { Queue } from 'bullmq';
-import { register } from './lib/metrics';
-import { bullMqConnection } from './lib/caseDbType';
+import { register } from './lib/metrics.js';
+import { bullMqConnection } from './lib/caseDbType.js';
 
 const app = express();
 app.use(express.json());
