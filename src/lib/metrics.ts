@@ -1,4 +1,4 @@
-import { Registry, Counter, Histogram, Gauge } from 'prom-client';
+import { Registry, Counter, Histogram } from 'prom-client';
 export const register = new Registry();
 
 export const jobsProcessedTotal = new Counter({

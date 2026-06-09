@@ -1,0 +1,27 @@
+services:
+  # Redis Server
+  redis:
+    image: redis:7-alpine
+    container_name: redis_server
+    restart: always
+    ports:
+      - "6379:6379"
+    # RedisInsight with defaults
+    command: redis-server --requirepass yourpassword
+    volumes:
+      - redis_data:/data
+
+  # Redis Dashboard (RedisInsight)
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redis_dashboard
+    restart: always
+    ports:
+      # Map host 8001 to container port 5540
+      - "8001:5540"
+    volumes:
+      - redisinsight_data:/data
+
+volumes:
+  redis_data:
+  redisinsight_data:
