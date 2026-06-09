@@ -1,7 +1,7 @@
-import { Redis } from 'ioredis';
 import 'dotenv/config';
+import { Redis } from 'ioredis';
 
-const redisUrl = process.env.REDIS_URL || 'redis://:yourpassd@127.0.0.1:6379';
+const redisUrl = process.env.REDIS_URL || '';
 
 export const redisConnection = new Redis(redisUrl, {
   maxRetriesPerRequest: null,
