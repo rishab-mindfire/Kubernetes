@@ -5,18 +5,16 @@ WORKDIR /app
 # Copy package files first
 COPY package*.json ./
 RUN npm install
-
-# Copy everything else (the source code)
 COPY . .
 
 # Run the build
 RUN npm run build
 
-# Stage 2: Production
+# Production Build
 FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Copy package files and install production-only dependencies
+# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm install --omit=dev --ignore-scripts
 
