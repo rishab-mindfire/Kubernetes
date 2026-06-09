@@ -1,1 +1,3 @@
-npm test
+#  lint-staged to handle linting/formatting
+npx lint-staged
+

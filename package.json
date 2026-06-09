@@ -11,11 +11,14 @@
     "prepare": "husky"
   },
   "lint-staged": {
-  "*.ts": [
-    "eslint --fix",
-    "prettier --write"
-  ]
-},
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
+  },
   "author": "Rishab raj verma",
   "license": "ISC",
   "dependencies": {
