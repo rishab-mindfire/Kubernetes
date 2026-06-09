@@ -1,6 +1,6 @@
 import express from 'express';
 import { Queue } from 'bullmq';
-import { register } from './lib/metrics.js';
+import { queueLength, register } from './lib/metrics.js';
 import { bullMqConnection } from './lib/caseDbType.js';
 
 const app = express();
@@ -33,12 +33,16 @@ app.get('/status/:id', async (req, res) => {
 app.get('/stats', async (req, res) => {
   try {
     const counts = await mathQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+    const currentLength = counts.waiting + counts.active;
+
+    // the Gauge
+    queueLength.set(currentLength);
 
     res.json({
       queue: 'math-tasks',
       timestamp: new Date().toISOString(),
       stats: counts,
-      length: counts.waiting + counts.active
+      length: currentLength
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve stats' });
@@ -55,8 +59,14 @@ app.post('/queue/reset', async (req, res) => {
 
 // metrics
 app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.send(await register.metrics());
+  // Get custom metrics from prom-client
+  const customMetrics = await register.metrics();
+
+  // Get BullMQ built-in metrics
+  const bullMetrics = await mathQueue.exportPrometheusMetrics();
+
+  res.set('Content-Type', 'text/plain');
+  res.send(`${customMetrics}\n${bullMetrics}`);
 });
 
 const PORT = process.env.PORT || 3000;
