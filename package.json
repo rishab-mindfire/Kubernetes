@@ -6,9 +6,12 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start:api": "tsx src/api.ts",
-    "start:worker": "tsx src/worker.ts",
-    "prepare": "husky"
+    "build": "tsc",
+  "dev:api": "tsx watch src/api.ts",
+  "dev:worker": "tsx watch src/worker.ts",
+  "start:api": "node dist/api.js",
+  "start:worker": "node dist/worker.js",
+    "prepare": "husky || true"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

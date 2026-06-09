@@ -11,7 +11,7 @@ const mathQueue = new Queue('math-tasks', { connection: bullMqConnection });
 // add jobs
 app.post('/submit', async (req, res) => {
   try {
-    const job = await mathQueue.add('calculate-primes', { limit: 10000000 }, {
+    const job = await mathQueue.add('calculate-primes', { limit: 100000000 }, {
       attempts: 3, // Retry failed jobs
       backoff: { type: 'exponential', delay: 1000 }
     });
