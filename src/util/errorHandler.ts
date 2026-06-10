@@ -5,7 +5,7 @@ export const handleControllerError = (
   res: Response,
   error: unknown,
   defaultMessage: string = 'Internal Server Error',
-  statusCode: number = 500,
+  statusCode: number = 500
 ) => {
   // Log the actual error internally for debugging
   console.warn('[Error]:', error);

@@ -11,10 +11,14 @@ const mathQueue = new Queue('math-tasks', { connection: bullMqConnection });
 // SERVICE : A ( add jobs )
 app.post('/submit', async (req, res) => {
   try {
-    const job = await mathQueue.add('calculate-primes', { limit: 100000000 }, {
-      attempts: 3, // Retry failed jobs
-      backoff: { type: 'exponential', delay: 1000 }
-    });
+    const job = await mathQueue.add(
+      'calculate-primes',
+      { limit: 100000000 },
+      {
+        attempts: 3, // Retry failed jobs
+        backoff: { type: 'exponential', delay: 1000 },
+      }
+    );
     res.json({ id: job.id });
   } catch (error) {
     handleControllerError(res, error, 'Failed to queue job');
@@ -30,7 +34,13 @@ app.get('/status/:id', async (req, res) => {
 // SERVICE : C (Returns queue stats)
 app.get('/stats', async (req, res) => {
   try {
-    const counts = await mathQueue.getJobCounts('waiting', 'active', 'completed', 'failed', 'delayed');
+    const counts = await mathQueue.getJobCounts(
+      'waiting',
+      'active',
+      'completed',
+      'failed',
+      'delayed'
+    );
     const currentLength = counts.waiting + counts.active;
 
     // the Gauge
@@ -39,11 +49,10 @@ app.get('/stats', async (req, res) => {
       queue: 'math-tasks',
       timestamp: new Date().toISOString(),
       stats: counts,
-      length: currentLength
+      length: currentLength,
     });
   } catch (error) {
-        handleControllerError(res, error, 'Failed to retrieve stats');
-
+    handleControllerError(res, error, 'Failed to retrieve stats');
   }
 });
 
@@ -63,7 +72,7 @@ app.get('/ready', async (req, res) => {
 // API-end-points (Retry failed jobs or reset)
 app.post('/queue/reset', async (req, res) => {
   const failedJobs = await mathQueue.getFailed();
-  await Promise.all(failedJobs.map(job => job.retry()));
+  await Promise.all(failedJobs.map((job) => job.retry()));
   res.json({ message: `Retried ${failedJobs.length} failed jobs` });
 });
 
@@ -80,5 +89,5 @@ app.get('/metrics', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.warn(`API running on port ${PORT}`)
+  console.warn(`API running on port ${PORT}`);
 });
