@@ -1,5 +1,7 @@
+version: "3.9"
+
 services:
- # Redis DB
+  # Redis DB
   redis:
     image: redis:7-alpine
     container_name: redis_server
@@ -9,33 +11,51 @@ services:
     volumes:
       - redis_data:/data
 
-  #  RedisInsight Dashboard Service
+  # RedisInsight Dashboard
   redis_insight:
     image: redis/redisinsight:latest
     container_name: redis_insight
     ports:
       - "5540:5540"
     restart: always
- # Application end points
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+
+  # API Service
   api:
     build: .
     container_name: api_service
     ports:
-      - "3001:3001"
+    - "3001:3001"
     environment:
-      - PORT=3001
-      - REDIS_URL=redis://:password@123@redis:6379
+      PORT: 3001
+      REDIS_URL: redis://:password@123@redis:6379
+    expose:
+      - "3001"
     depends_on:
       - redis
- # node workers
+    restart: unless-stopped
+
+  # Worker Service
   worker:
     build: .
     container_name: worker_service
     command: npm run start:worker
     environment:
-      - REDIS_URL=redis://:password@123@redis:6379
+      REDIS_URL: redis://:password@123@redis:6379
     depends_on:
       - redis
+    restart: unless-stopped
 
 volumes:
   redis_data:

@@ -12,28 +12,24 @@
     "dev:worker": "nodemon --watch src --ext ts --exec \"tsx src/worker.ts\"",
     "start:api": "node dist/api.js",
     "start:worker": "node dist/worker.js",
-    "prepare": "husky || true"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
-      "prettier --write"
-    ],
-    "*.{json,md,css}": [
-      "prettier --write"
-    ]
+    "prepare": "husky || true",
+    "format": "prettier --write \"src/**/*.{ts,json,md}\""
   },
   "author": "Rishab raj verma",
   "license": "ISC",
   "dependencies": {
+    "@types/redis": "^4.0.10",
     "bullmq": "^5.78.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "ioredis": "^5.11.1",
     "prebuild": "^13.0.1",
-    "prom-client": "^15.1.3"
+    "prom-client": "^15.1.3",
+    "redis": "^6.0.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
     "@eslint/js": "^10.0.1",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.2",

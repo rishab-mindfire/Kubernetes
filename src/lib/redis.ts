@@ -14,11 +14,11 @@ export const redisConnection = new Redis(redisUrl, {
 
 // Event listeners to handle connection states
 redisConnection.on('connect', () => {
-  console.log('Redis: Successfully connected to the server.');
+  console.warn('Redis: Successfully connected to the server.');
 });
 
 redisConnection.on('ready', () => {
-  console.log('Redis: Connection is ready for commands.');
+  console.warn('Redis: Connection is ready for commands.');
 });
 
 redisConnection.on('error', (err) => {
@@ -30,5 +30,5 @@ redisConnection.on('close', () => {
 });
 
 redisConnection.on('reconnecting', () => {
-  console.log('Redis: Attempting to reconnect...');
+  console.warn('Redis: Attempting to reconnect...');
 });
