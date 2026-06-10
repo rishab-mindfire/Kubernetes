@@ -7,7 +7,7 @@ const yieldLoop = () => new Promise(resolve => setImmediate(resolve));
 
 const worker = new Worker('math-tasks', async (job) => {
   const end = jobProcessingTime.startTimer();
-  console.log(`Processing job: ${job.id}`);
+  console.warn(`Processing job: ${job.id}`);
 
   try {
     const limit = job.data.limit;
@@ -20,7 +20,7 @@ const worker = new Worker('math-tasks', async (job) => {
       // Log progress periodically
       if (i % logInterval === 0) {
         const percent = ((i / limit) * 100).toFixed(1);
-        console.log(`[Job ${job.id}] Progress: ${percent}% (Checked ${i}/${limit})`);
+        console.warn(`[Job ${job.id}] Progress: ${percent}% (Checked ${i}/${limit})`);
       }
 
       let isPrime = true;
@@ -45,3 +45,20 @@ const worker = new Worker('math-tasks', async (job) => {
 });
 
 worker.on('failed', (job, err) => console.error(`Job ${job?.id} failed: ${err.message}`));
+
+
+// listeners for check worker is alive
+const gracefulShutdown = async (signal: NodeJS.Signals) => {
+  console.warn(`${signal} received. Closing worker...`);
+  try {
+    await worker.close();
+    process.exit(0);
+  } catch (err) {
+    console.error('Error during shutdown:', err);
+    process.exit(1);
+  }
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+

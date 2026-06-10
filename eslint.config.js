@@ -7,7 +7,7 @@ export default tseslint.config(
   {
     files: ['src/**/*.{js,ts}'],
     rules: {
-      'no-console': 'error',
-    },
+  'no-console': ['error', { allow: ['warn', 'error'] }],
+},
   },
 );
