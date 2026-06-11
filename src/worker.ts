@@ -13,7 +13,7 @@ const worker = new Worker(
 
     try {
       // Simulate occasional failures for testing metrics/retries
-      if (Math.random() < 0.05) {
+      if (Math.random() < 0.25) {
         throw new Error('Simulated random worker failure by code');
       }
 
