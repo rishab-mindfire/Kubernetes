@@ -1,109 +1,180 @@
-# Kubernetes Application Demonstration
+# Kubernetes Multi-Service Application
 
-This project demonstrates a multi-service Kubernetes deployment featuring an API service, an aggregator service, and Redis for storage, exposed via an Nginx Ingress Controller.
+This repository demonstrates a production-ready, multi-service Kubernetes deployment. The architecture features an API service, a data aggregator service, a background worker, and a Redis instance for data storage and caching—all exposed externally via an Nginx Ingress Controller.
 
 ---
 
-## Architecture
+## Architecture Overview
 
-The application uses path-based routing to expose microservices:
-
-/api/ -> api-service (Port 4001)
-/aggregator/ -> aggregator-service (Port 4002)
-
-internal services :
-worker (for task performing)
-redies (task data, time store)
-
-kube have ingress also wich is adding /api and /aggregator
-
-### Prerequisites
-
-Minikube installed and running.
-Ingress addon enabled (minikube addons enable ingress).
-kubectl configured.
-
-### file folder structure
-
-kubernetes/
--aggregator/
--deployment.yaml
--service.yaml
--api/
--deployment.yaml
--service.yaml
--worker
--deployment.yaml
--service.yaml
--ingress.yaml
-dockerfile
-docker-compose.yml
-src/
--aggregator.ts
--api.ts
--worker.ts
-lib/
--metrics.ts
--redis.ts
-util/
--errorHandler.ts
--types.ts
-
-### Deployment Steps
-
-Start the Minikube Tunnel (Required to access Ingress on localhost):
+The application utilizes **path-based routing** through an Ingress Controller to expose specific microservices to the outside world, while keeping backend workers and databases securely isolated within the cluster network.
 
 ```
-minikube tunnel
-```
-
-Apply Configurations:
-
-```
-kubectl apply -f kubernetes/
-```
-
-Verify Deployment:
-
-```
-kubectl get pods
-kubectl get ingress
-```
-
-Once the tunnel is active, access the services via:
-API: http://127.0.0.1/api/stats
-
-Aggregator: http://127.0.0.1/aggregator/
-
-#### Available Scripts
-
-start redis server from docker image
-or
-run docker yamal file wich will inwoke services wich will not disturbe port 3001 and 3002 for express server for local development
-redis (port 6379)
-redis_insight (port 5540 )
-api (port 4001)
-worker
-aggregator (port 4002)
-now we can start local development ports
-commands for local set-up nodeJS project
-npm run dev or
-in 3 terminal run
-npm run dev:api (port 3001)
-npm run dev:worker
-npm run dev:aggregator (port 3002)
-
-following commands for kubernet:
-
-minikube start
-
-### env.example for node app
+                    [ Ingress Controller (Port 80) ]
+                                   |
+         -----------------------------------------------------
+        |                                                     |
+  /api/* (Port 4001)                                 /aggregator/* (Port 4002)
+        |                                                     |
+ [ api-service ]                                     [ aggregator-service ]
+        |                                                     |
+         -----------------------> [ Redis ] <-----------------
+                                     ^
+                                     |
+                              [ worker-service ]
 
 ```
+
+### Routing Table
+
+- **External API Entrypoint:** `http://localhost/api/` $\rightarrow$ Forwarded to `api-service` (Port 4001)
+- **External Aggregator Entrypoint:** `http://localhost/aggregator/` $\rightarrow$ Forwarded to `aggregator-service` (Port 4002)
+- **Internal Services:** `worker` and `redis` (Cluster-private, not exposed via Ingress)
+
+---
+
+## File Structure
+
+To keep the repository clean and scalable, the Kubernetes manifests have been organized into dedicated subdirectories per service, separating configuration (`ingress.yaml`) from workloads.
+
+```text
+.
+├── kubernetes/                  # Kubernetes Manifests
+│   ├── ingress.yaml             # Global Nginx Ingress Routing
+│   ├── api/                     # API Service Manifests
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   ├── aggregator/              # Aggregator Service Manifests
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   ├── worker/                  # Background Worker Manifests
+│   │   ├── deployment.yaml
+│   │   └── service.yaml
+│   └── redis/                   # Redis Infrastructure (Recommended Addition)
+│       ├── deployment.yaml
+│       └── service.yaml
+├── src/                         # TypeScript Application Source
+│   ├── api.ts
+│   ├── aggregator.ts
+│   └── worker.ts
+├── lib/                         # Shared Libraries
+│   ├── metrics.ts
+│   └── redis.ts
+├── util/                        # Shared Utilities & Types
+│   ├── errorHandler.ts
+│   └── types.ts
+├── Dockerfile
+├── docker-compose.yml           # Local Development Orchestration
+├── package.json
+└── .env.example
+
+```
+
+---
+
+## Local Development Setup
+
+You can run the entire infrastructure locally using Docker Compose, allowing you to develop code on your local machine while interacting with containerized backing services.
+
+### 1. Environment Configuration
+
+Create a `.env` file in the root directory:
+
+```env
 NODE_ENV=development
-REDIS_URL=redis://:password@123@redis:6379
-# Ports for services
+REDIS_URL=redis://:password123@localhost:6379
+
+# Local Express Server Ports
 API_PORT=3001
 AGGREGATOR_PORT=3002
 
 ```
+
+### 2. Spin Up Infrastructure Containers
+
+Run the following command to start Redis, Redis Insight, and default configurations without binding conflicts on ports `3001` and `3002`:
+
+```bash
+docker-compose up -d
+
+```
+
+- **Redis:** `localhost:6379`
+- **Redis Insight UI:** `http://localhost:5540`
+
+### 3. Start Local Node.js Services
+
+Open three separate terminal windows to run your microservices in development mode:
+
+```bash
+# Terminal 1: API Service (Runs on Port 3001)
+npm run dev:api
+
+# Terminal 2: Aggregator Service (Runs on Port 3002)
+npm run dev:aggregator
+
+# Terminal 3: Background Worker
+npm run dev:worker
+
+```
+
+_Alternatively, if configured in your `package.json`, run all simultaneously:_ `npm run dev`
+
+---
+
+## Kubernetes Deployment Steps
+
+### Prerequisites
+
+- [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed and running.
+- `kubectl` CLI configured to point to your Minikube cluster.
+- Ingress addon enabled inside Minikube.
+
+```bash
+# Start Minikube cluster
+minikube start
+
+# Enable Nginx Ingress Controller
+minikube addons enable ingress
+
+```
+
+### 1. Start the Minikube Tunnel
+
+Because Ingress controllers rely on cloud load balancers, you **must** keep a routing tunnel open in a dedicated terminal window to route traffic to `localhost`:
+
+```bash
+minikube tunnel
+
+```
+
+### 2. Apply Configurations
+
+Deploy all manifests recursively from the structured `kubernetes/` folder:
+
+```bash
+kubectl apply -f kubernetes/
+
+```
+
+### 3. Verify the Cluster Status
+
+Ensure all resources are spawned successfully and the Ingress resource has been assigned an IP address:
+
+```bash
+# Check Pod status
+kubectl get pods
+
+# Check Services configuration
+kubectl get svc
+
+# Check Ingress routing rules
+kubectl get ingress
+
+```
+
+### 4. Verification Endpoints
+
+Once the tunnel is active and status checks pass, test the deployment using the production ports via Ingress:
+
+- **API Stats Endpoint:** `http://127.0.0.1/api/stats`
+- **Aggregator Metrics Endpoint:** `http://127.0.0.1/aggregator/metrics`
