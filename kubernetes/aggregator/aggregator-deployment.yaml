@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aggregator-deployment
+  labels:
+    app: aggregator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aggregator
+  template:
+    metadata:
+      labels:
+        app: aggregator
+    spec:
+      containers:
+      - name: aggregator
+        image: my-app-service:latest
+        imagePullPolicy: IfNotPresent
+        command: ["npm", "run", "start:aggregator"]
+        env:
+        - name: REDIS_URL
+          value: "redis://:password@123@redis-service:6379"
+        - name: AGGREGATOR_PORT
+          value: "4002" # Aggregator port
+        ports:
+        - containerPort: 4002

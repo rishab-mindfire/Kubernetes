@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-deployment
+  labels:
+    app: redis
+spec:
+  replicas: 1 # We only need one instance for this Redis broker
+  selector:
+    matchLabels:
+      app: redis # Links this deployment to the service below
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7-alpine
+        # pass the password here directly to secure the instance
+        command: ["redis-server", "--requirepass", "password@123"]
+        ports:
+        - containerPort: 6379 # The port Redis listens on inside the container
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data # Where Redis stores its data files inside the container
+      volumes:
+      - name: redis-data
+        emptyDir: {} # Temporary storage; will be replaced by a PVC for permanent data

@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker-deployment
+  labels:
+    app: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: my-app-service:latest
+        imagePullPolicy: IfNotPresent
+        command: ["npm", "run", "start:worker"]
+        env:
+        - name: REDIS_URL
+          value: "redis://:password@123@redis-service:6379"
+        # The worker usually doesn't need to be externally accessible,
+        # but it must expose the metrics port internally.
+        ports:
+        - containerPort: 4001 # Assuming your worker uses the same port for /metrics

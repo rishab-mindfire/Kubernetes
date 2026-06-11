@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-deployment
+  labels:
+    app: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api # Matches the Service selector below
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: my-app-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 4001 # The port your Node.js app listens on
+        env:
+        - name: REDIS_URL
+          # Points to the service name defined in redis-service.yaml
+          value: "redis://:password@123@redis-service:6379"
+        - name: API_PORT
+          value: "4001"

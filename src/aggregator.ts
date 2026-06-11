@@ -2,14 +2,12 @@ import express from 'express';
 import { Queue } from 'bullmq';
 import { register, queueLength, totalJobsSubmitted, totalJobsCompleted } from './lib/metrics.js';
 import { bullMqConnection } from './lib/caseDbType.js';
+import type { JobCounts } from './util/types.js';
 
 const app = express();
 const mathQueue = new Queue('math-tasks', { connection: bullMqConnection });
 
-// Dynamically extract the JobCounts type from the BullMQ Queue method
-type JobCounts = Awaited<ReturnType<Queue['getJobCounts']>>;
-
-// Initialize state
+// Initialize state of all jobs
 let lastCounts: JobCounts = {
   completed: 0,
   failed: 0,
@@ -61,7 +59,7 @@ app.get('/metrics', async (req, res) => {
   res.send(await register.metrics());
 });
 
-// JSON stats endpoint for local/web debugging
+// JSON stats endpoint
 app.get('/stats', async (req, res) => {
   const counts = await mathQueue.getJobCounts(
     'waiting',

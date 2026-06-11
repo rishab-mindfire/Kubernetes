@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: aggregator-service
+spec:
+  selector:
+    app: aggregator
+  ports:
+    - protocol: TCP
+      port: 4002 # Port for metrics scraping and API access
+      targetPort: 4002
+  type: ClusterIP
