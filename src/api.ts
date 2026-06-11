@@ -13,7 +13,7 @@ app.post('/submit', async (req, res) => {
   try {
     const job = await mathQueue.add(
       'calculate-primes',
-      { limit: 100000000 },
+      { limit: 10000000 },
       {
         attempts: 3, // Retry failed jobs
         backoff: { type: 'exponential', delay: 1000 },
@@ -47,9 +47,11 @@ app.get('/stats', async (req, res) => {
     queueLength.set(currentLength);
     res.json({
       queue: 'math-tasks',
-      timestamp: new Date().toISOString(),
+      queueLength: currentLength,
+      totalSubmitted: counts.waiting + counts.active + counts.completed + counts.failed,
+      totalCompleted: counts.completed,
+      totalFailed: counts.failed,
       stats: counts,
-      length: currentLength,
     });
   } catch (error) {
     handleControllerError(res, error, 'Failed to retrieve stats');
@@ -87,7 +89,7 @@ app.get('/metrics', async (req, res) => {
   res.send(`${customMetrics}\n${bullMetrics}`);
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.API_PORT || 3001;
 app.listen(PORT, () => {
   console.warn(`API running on port ${PORT}`);
 });
