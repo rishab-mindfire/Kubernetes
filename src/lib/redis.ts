@@ -12,6 +12,10 @@ export const redisConnection = new Redis(redisUrl, {
   },
 });
 
+redisConnection.on('error', (err) => {
+  console.error('Redis: Connection Error:', err.message);
+});
+
 // Event listeners to handle connection states
 redisConnection.on('connect', () => {
   console.warn('Redis: Successfully connected to the server.');

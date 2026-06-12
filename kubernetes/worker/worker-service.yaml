@@ -6,7 +6,8 @@ spec:
   selector:
     app: worker
   ports:
-    - protocol: TCP
+    - name: metrics
+      protocol: TCP
       port: 4001 # Prometheus will scrape this service on port 4001
       targetPort: 4001
   type: ClusterIP # Only internal access needed for metrics scraping

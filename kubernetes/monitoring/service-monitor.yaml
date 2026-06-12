@@ -1,0 +1,19 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: aggregator-monitor
+  namespace: monitoring        #  'monitoring'
+  labels:
+    release: monitoring        # This matches your exact terminal output!
+spec:
+  # This tells Prometheus to look across ALL namespaces to find your service
+  namespaceSelector:
+    matchNames:
+      - default                #  Tells it to look back inside 'default'
+  selector:
+    matchLabels:
+      app: aggregator          # Finds the service with label 'app: aggregator'
+  endpoints:
+  - port: metrics         # Matches the port name in your service file
+    path: /metrics
+    interval: 15s

@@ -1,10 +1,15 @@
 import express from 'express';
 import { Queue } from 'bullmq';
+import client from 'prom-client';
 import { register, queueLength, totalJobsSubmitted, totalJobsCompleted } from './lib/metrics.js';
 import { bullMqConnection } from './lib/caseDbType.js';
 import type { JobCounts } from './util/types.js';
 
 const app = express();
+
+// Explicitly mapping your imported register to the default metrics collector
+client.collectDefaultMetrics({ register: register });
+
 const mathQueue = new Queue('math-tasks', { connection: bullMqConnection });
 
 // Initialize state of all jobs
@@ -15,6 +20,9 @@ let lastCounts: JobCounts = {
   active: 0,
   delayed: 0,
 };
+
+// Guard flag to prevent baseline metrics from triggering huge deltas on startup/reboots
+let isFirstRun = true;
 
 // Polls Redis every 5 seconds
 setInterval(async () => {
@@ -31,19 +39,24 @@ setInterval(async () => {
     const currentLength = counts.waiting + counts.active;
     queueLength.set(currentLength);
 
-    // Update Counters: Increment by delta to ensure accurate rates
-    const completedDelta = counts.completed - lastCounts.completed;
-    if (completedDelta > 0) {
-      totalJobsCompleted.inc(completedDelta);
-    }
+    // Only calculate deltas if this isn't the baseline collection run
+    if (!isFirstRun) {
+      // Update Counters: Increment by delta to ensure accurate rates
+      const completedDelta = counts.completed - lastCounts.completed;
+      if (completedDelta > 0) {
+        totalJobsCompleted.inc(completedDelta);
+      }
 
-    const currentTotal = counts.waiting + counts.active + counts.completed + counts.failed;
-    const previousTotal =
-      lastCounts.waiting + lastCounts.active + lastCounts.completed + lastCounts.failed;
-    const submittedDelta = currentTotal - previousTotal;
+      const currentTotal = counts.waiting + counts.active + counts.completed + counts.failed;
+      const previousTotal =
+        lastCounts.waiting + lastCounts.active + lastCounts.completed + lastCounts.failed;
+      const submittedDelta = currentTotal - previousTotal;
 
-    if (submittedDelta > 0) {
-      totalJobsSubmitted.inc(submittedDelta);
+      if (submittedDelta > 0) {
+        totalJobsSubmitted.inc(submittedDelta);
+      }
+    } else {
+      isFirstRun = false; // Baseline established, safe to track deltas now
     }
 
     // Update state for next interval
@@ -55,8 +68,12 @@ setInterval(async () => {
 
 // Prometheus metrics endpoint
 app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', register.contentType);
-  res.send(await register.metrics());
+  try {
+    res.set('Content-Type', register.contentType);
+    res.send(await register.metrics());
+  } catch (err) {
+    res.status(500).send(err);
+  }
 });
 
 // JSON stats endpoint

@@ -3,11 +3,10 @@ kind: Service
 metadata:
   name: api-service
 spec:
+  type: ClusterIP
   selector:
     app: api # Must match the Deployment labels
   ports:
     - protocol: TCP
-      port: 4001 # The port the service exposes
-      targetPort: 4001 # The port the container is listening on
-      nodePort: 30001 # External access port (accessible via localhost:30001)
-  type: NodePort # Allows external traffic from outside the cluster
+      port: 4001       # Internal cluster port
+      targetPort: 4001 # container port
