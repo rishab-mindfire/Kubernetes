@@ -5,7 +5,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis_server
-    command: redis-server --requirepass password@123
+    command: redis-server --requirepass password123
     ports:
       - "6379:6379"
     volumes:
@@ -38,7 +38,7 @@ services:
     container_name: api_service
     environment:
       - API_PORT=4001
-      - REDIS_URL=redis://:password@123@redis:6379
+      - REDIS_URL=redis://:password123@redis:6379
     ports:
       - "4001:4001"
     depends_on:
@@ -52,7 +52,7 @@ services:
     container_name: worker_service
     command: npm run start:worker
     environment:
-      - REDIS_URL=redis://:password@123@redis:6379
+      - REDIS_URL=redis://:password123@redis:6379
     depends_on:
       - redis
     networks:
@@ -65,7 +65,7 @@ services:
     command: npm run start:aggregator
     environment:
       - AGGREGATOR_PORT=4002
-      - REDIS_URL=redis://:password@123@redis:6379
+      - REDIS_URL=redis://:password123@redis:6379
     ports:
       - "4002:4002"
     depends_on:

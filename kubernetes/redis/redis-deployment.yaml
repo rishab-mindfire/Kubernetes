@@ -5,7 +5,7 @@ metadata:
   labels:
     app: redis
 spec:
-  replicas: 1 # We only need one instance for this Redis broker
+  replicas: 1 # only one instance for this Redis broker
   selector:
     matchLabels:
       app: redis # Links this deployment to the service below
@@ -17,8 +17,9 @@ spec:
       containers:
       - name: redis
         image: redis:7-alpine
+        imagePullPolicy: Never
         # pass the password here directly to secure the instance
-        command: ["redis-server", "--requirepass", "password@123"]
+        command: ["redis-server", "--requirepass", "password123"]
         ports:
         - containerPort: 6379 # The port Redis listens on inside the container
         volumeMounts:

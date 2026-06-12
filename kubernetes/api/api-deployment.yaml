@@ -17,12 +17,12 @@ spec:
       containers:
       - name: api
         image: my-app-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
         ports:
         - containerPort: 4001 # The port your Node.js app listens on
         env:
         - name: REDIS_URL
           # Points to the service name defined in redis-service.yaml
-          value: "redis://:password@123@redis-service:6379"
+          value: "redis://:password123@redis-service:6379"
         - name: API_PORT
           value: "4001"

@@ -1,14 +1,22 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: my-app-ingress
+  name: microservices-ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$1
+    # Security Rule: Block external public requests targeting your metrics endpoint
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      location ~* ^/aggregator/metrics {
+          deny all;
+          return 403;
+      }
 spec:
   ingressClassName: nginx
   rules:
-  - http:
+  - host: my-app.local
+    http:
       paths:
+      # API Service Routing
       - path: /api/(.*)
         pathType: ImplementationSpecific
         backend:
@@ -16,6 +24,7 @@ spec:
             name: api-service
             port:
               number: 4001
+      # Aggregator Service Routing
       - path: /aggregator/(.*)
         pathType: ImplementationSpecific
         backend:
