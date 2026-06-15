@@ -4,7 +4,7 @@ import { Redis } from 'ioredis';
 // Construct the URL dynamically to handle the host override
 let redisUrl = process.env.REDIS_URL || 'redis://:password123@localhost:6379';
 
-// override to localhost if we are in development mode
+// override to localhost if in development mode
 if (process.env.NODE_ENV === 'development') {
   // Replace the host part 'redis' with 'localhost' in the connection string
   redisUrl = redisUrl.replace('@redis:', '@localhost:');

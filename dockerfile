@@ -20,7 +20,7 @@ USER appuser
 # Set NODE_ENV to production
 ENV NODE_ENV=production
 
-# The port is now managed by the environment variable,
+# The ports are services exposed
 EXPOSE 4001 4002 4003
 
 CMD ["npm", "run"]
