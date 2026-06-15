@@ -17,7 +17,7 @@ spec:
       containers:
       - name: aggregator
         image: my-app-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
         command: ["npm", "run", "start:aggregator"]
         env:
         - name: REDIS_URL
