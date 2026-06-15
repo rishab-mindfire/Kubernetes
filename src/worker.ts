@@ -1,58 +1,60 @@
-import { Worker } from 'bullmq';
-import { jobsProcessedTotal, jobProcessingTime, jobErrorsTotal } from './lib/metrics.js';
+import 'dotenv/config';
+import express from 'express';
+import { Worker, Job } from 'bullmq';
+import {
+  totalJobsCompleted,
+  jobErrorsTotal,
+  jobProcessingTime,
+  setupMetricsRoute,
+} from './lib/metrics.js';
 import { bullMqConnection } from './lib/caseDbType.js';
 
-// Yield the event loop periodically to keep BullMQ alive
-const yieldLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+const app = express();
+setupMetricsRoute(app);
+
+const METRICS_PORT = process.env.WORKER_METRICS_PORT || 3003;
+app.listen(METRICS_PORT, () => {
+  console.info(`[SYSTEM] Worker metrics server listening on port ${METRICS_PORT}`);
+});
+
+const yieldLoop = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
 const worker = new Worker(
   'math-tasks',
-  async (job) => {
+  async (job: Job) => {
+    console.info(`[TASK_PROCESSING] ID: ${job.id} | Attempt: ${job.attemptsMade + 1}`);
     const end = jobProcessingTime.startTimer();
-    console.warn(`Processing job: ${job.id}`);
 
     try {
-      // Simulate occasional failures for testing metrics/retries
-      if (Math.random() < 0.25) {
-        throw new Error('Simulated random worker failure by code');
+      // Simulate Random 50% Failure
+      if (Math.random() < 0.5) {
+        throw new Error('Simulated random failure');
       }
 
       const limit = job.data.limit;
       let count = 0;
-      const logInterval = Math.max(1, Math.floor(limit / 20));
 
       for (let i = 2; i < limit; i++) {
-        // Prevent BullMQ stalled-job detection
-        if (i % 5000 === 0) {
-          await yieldLoop();
-        }
-
-        // Log every ~5%
-        if (i % logInterval === 0) {
-          const percent = ((i / limit) * 100).toFixed(1);
-
-          console.warn(`[Job ${job.id}] Progress: ${percent}% (${i}/${limit})`);
-        }
-
+        if (i % 5000 === 0) await yieldLoop();
         let isPrime = true;
         const sqrt = Math.sqrt(i);
-
         for (let j = 2; j <= sqrt; j++) {
           if (i % j === 0) {
             isPrime = false;
             break;
           }
         }
-
-        if (isPrime) {
-          count++;
-        }
+        if (isPrime) count++;
       }
 
-      jobsProcessedTotal.inc();
-      console.warn(`Job ${job.id} completed successfully. Prime count: ${count}`);
-
+      totalJobsCompleted.inc();
+      console.info(`[TASK_DONE] ID: ${job.id} | Prime count: ${count}`);
       return { count };
+    } catch (err: unknown) {
+      jobErrorsTotal.inc();
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[TASK_FAILED] ID: ${job.id} | Error: ${message}`);
+      throw err;
     } finally {
       end();
     }
@@ -60,33 +62,19 @@ const worker = new Worker(
   {
     connection: bullMqConnection,
     concurrency: 1,
+    removeOnComplete: { count: 100 },
+    removeOnFail: { count: 100 },
+    limiter: { max: 100, duration: 1000 },
   }
 );
 
-// Failed jobs metric
-worker.on('failed', (job, err) => {
-  jobErrorsTotal.inc();
-  console.error(`Job ${job?.id} failed: ${err.message}`);
+worker.on('ready', () => console.info('[QUEUE_CONNECTION] Worker ready.'));
+worker.on('active', (job) => console.info(`[QUEUE_PROCESS] Job ${job.id} active`));
+worker.on('failed', (job: Job | undefined, err: Error) => {
+  console.error(`[QUEUE_PROCESS] Job ${job?.id} has permanently failed:`, err.message);
 });
 
-// Successful completion log
-worker.on('completed', (job) => {
-  console.warn(`Job ${job.id} completed`);
+process.on('SIGTERM', async () => {
+  await worker.close();
+  process.exit(0);
 });
-
-// Graceful shutdown
-const gracefulShutdown = async (signal: NodeJS.Signals) => {
-  console.warn(`${signal} received. Closing worker...`);
-
-  try {
-    await worker.close();
-    console.warn('Worker closed successfully');
-    process.exit(0);
-  } catch (err) {
-    console.error('Error during shutdown:', err);
-    process.exit(1);
-  }
-};
-
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));

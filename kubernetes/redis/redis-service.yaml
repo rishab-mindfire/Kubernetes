@@ -10,3 +10,5 @@ spec:
       port: 6379 # The port the service exposes to other pods
       targetPort: 6379 # The port to forward traffic to on the pod
   type: ClusterIP # Only accessible from inside the Kubernetes cluster
+
+

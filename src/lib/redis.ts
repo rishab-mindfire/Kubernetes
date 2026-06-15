@@ -1,38 +1,32 @@
 import 'dotenv/config';
 import { Redis } from 'ioredis';
 
-const redisUrl = process.env.REDIS_URL || '';
+// Construct the URL dynamically to handle the host override
+let redisUrl = process.env.REDIS_URL || 'redis://:password123@localhost:6379';
+
+// override to localhost if we are in development mode
+if (process.env.NODE_ENV === 'development') {
+  // Replace the host part 'redis' with 'localhost' in the connection string
+  redisUrl = redisUrl.replace('@redis:', '@localhost:');
+}
 
 export const redisConnection = new Redis(redisUrl, {
   maxRetriesPerRequest: null,
-  // Enable reconnection
   retryStrategy(times) {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
+    return Math.min(times * 50, 2000);
   },
 });
 
 redisConnection.on('error', (err) => {
-  console.error('Redis: Connection Error:', err.message);
+  console.error('CRITICAL Redis Error:', err);
 });
 
-// Event listeners to handle connection states
-redisConnection.on('connect', () => {
-  console.warn('Redis: Successfully connected to the server.');
-});
-
-redisConnection.on('ready', () => {
-  console.warn('Redis: Connection is ready for commands.');
-});
-
-redisConnection.on('error', (err) => {
-  console.error('Redis: Connection Error:', err.message);
-});
-
-redisConnection.on('close', () => {
-  console.warn('Redis: Connection closed.');
-});
-
-redisConnection.on('reconnecting', () => {
-  console.warn('Redis: Attempting to reconnect...');
-});
+// a test command to see if it actually works
+redisConnection
+  .info()
+  .then(() => {
+    console.warn('Redis: INFO command successful - Connection verified!');
+  })
+  .catch((err) => {
+    console.error('Redis: Connection failed during initial check:', err.message);
+  });

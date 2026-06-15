@@ -3,20 +3,16 @@ kind: Ingress
 metadata:
   name: microservices-ingress
   annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Capture group $1 now represents everything after the service prefix
     nginx.ingress.kubernetes.io/rewrite-target: /$1
-    # Security Rule: Block external public requests targeting your metrics endpoint
-    nginx.ingress.kubernetes.io/configuration-snippet: |
-      location ~* ^/aggregator/metrics {
-          deny all;
-          return 403;
-      }
 spec:
   ingressClassName: nginx
   rules:
   - host: my-app.local
     http:
       paths:
-      # API Service Routing
+      # Matches: /api/status/123
       - path: /api/(.*)
         pathType: ImplementationSpecific
         backend:
@@ -24,7 +20,7 @@ spec:
             name: api-service
             port:
               number: 4001
-      # Aggregator Service Routing
+      # Matches: /aggregator/metrics
       - path: /aggregator/(.*)
         pathType: ImplementationSpecific
         backend:

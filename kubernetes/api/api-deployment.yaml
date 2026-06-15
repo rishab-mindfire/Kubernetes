@@ -18,6 +18,7 @@ spec:
       - name: api
         image: my-app-service:latest
         imagePullPolicy: Never
+        command: ["npm", "run", "start:api"]
         ports:
         - containerPort: 4001 # The port your Node.js app listens on
         env:
