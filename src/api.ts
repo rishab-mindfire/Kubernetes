@@ -1,37 +1,49 @@
+import 'dotenv/config';
 import express from 'express';
 import { Queue } from 'bullmq';
-import { queueLength } from './lib/metrics.js';
+import { queueLength, setupMetricsRoute, totalJobsSubmitted } from './lib/metrics.js';
 import { bullMqConnection } from './lib/caseDbType.js';
 import { handleControllerError } from './util/errorHandler.js';
 
 const app = express();
 app.use(express.json());
+
+// Initialize the /metrics
+setupMetricsRoute(app);
+
+// Initialize Queue
 const mathQueue = new Queue('math-tasks', { connection: bullMqConnection });
 
-// SERVICE : A ( add jobs )
+// (Add jobs)
 app.post('/submit', async (req, res) => {
   try {
     const job = await mathQueue.add(
       'calculate-primes',
-      { limit: 10000000 },
+      { limit: 100000 },
       {
-        attempts: 3, // Retry failed jobs
-        backoff: { type: 'exponential', delay: 1000 },
+        attempts: 1,
       }
     );
+    totalJobsSubmitted.inc();
     res.json({ id: job.id });
   } catch (error) {
     handleControllerError(res, error, 'Failed to queue job');
   }
 });
 
-// SERVICE : B (get job status by id)
+// (Get job status)
 app.get('/status/:id', async (req, res) => {
-  const job = await mathQueue.getJob(req.params.id);
-  res.json({ status: await job?.getState(), result: job?.returnvalue });
+  try {
+    const job = await mathQueue.getJob(req.params.id);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+
+    res.json({ status: await job.getState(), result: job.returnvalue });
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to get job status');
+  }
 });
 
-// SERVICE : C (Returns queue stats)
+//  (Returns queue stats)
 app.get('/stats', async (req, res) => {
   try {
     const counts = await mathQueue.getJobCounts(
@@ -43,27 +55,17 @@ app.get('/stats', async (req, res) => {
     );
     const currentLength = counts.waiting + counts.active;
 
-    // the Gauge
+    // Update gauge
     queueLength.set(currentLength);
+
     res.json({
       queue: 'math-tasks',
       queueLength: currentLength,
-      totalSubmitted: counts.waiting + counts.active + counts.completed + counts.failed,
-      totalCompleted: counts.completed,
-      totalFailed: counts.failed,
       stats: counts,
     });
   } catch (error) {
     handleControllerError(res, error, 'Failed to retrieve stats');
   }
-});
-
-// extra helper end points : ----------------------------------------
-// API-end-points (Retry failed jobs or reset)
-app.post('/queue/reset', async (req, res) => {
-  const failedJobs = await mathQueue.getFailed();
-  await Promise.all(failedJobs.map((job) => job.retry()));
-  res.json({ message: `Retried ${failedJobs.length} failed jobs` });
 });
 
 const PORT = process.env.API_PORT || 3001;

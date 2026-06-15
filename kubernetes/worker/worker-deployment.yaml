@@ -22,11 +22,12 @@ spec:
         env:
         - name: REDIS_URL
           value: "redis://:password123@redis-service:6379"
+        - name: WORKER_METRICS_PORT
+          value: "4003"
         ports:
-        - containerPort: 4001
-        # for HPA
+        - containerPort: 4003
         resources:
           requests:
-            cpu: "200m"  # 0.2 CPU core - Min requirement for the pod
+            cpu: "200m"
           limits:
-            cpu: "500m"  # 0.5 CPU core - Max cap to prevent runaway processes
+            cpu: "500m"

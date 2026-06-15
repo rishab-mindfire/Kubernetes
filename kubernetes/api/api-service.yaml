@@ -5,8 +5,8 @@ metadata:
 spec:
   type: ClusterIP
   selector:
-    app: api # Must match the Deployment labels
+    app: api
   ports:
     - protocol: TCP
-      port: 4001       # Internal cluster port
+      port: 4001
       targetPort: 4001 # container port

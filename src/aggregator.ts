@@ -1,98 +1,128 @@
-import express from 'express';
+import 'dotenv/config';
+import express, { type Request, type Response } from 'express';
 import { Queue } from 'bullmq';
-import client from 'prom-client';
-import { register, queueLength, totalJobsSubmitted, totalJobsCompleted } from './lib/metrics.js';
+import {
+  queueLength,
+  totalJobsSubmitted,
+  totalJobsCompleted,
+  jobErrorsTotal,
+  setupMetricsRoute,
+} from './lib/metrics.js';
 import { bullMqConnection } from './lib/caseDbType.js';
-import type { JobCounts } from './util/types.js';
+import { handleControllerError } from './util/errorHandler.js';
 
 const app = express();
+app.use(express.json());
+setupMetricsRoute(app);
 
-// Explicitly mapping your imported register to the default metrics collector
-client.collectDefaultMetrics({ register: register });
+export interface QueueStats {
+  completed: number;
+  failed: number;
+  waiting: number;
+  active: number;
+  delayed: number;
+}
 
 const mathQueue = new Queue('math-tasks', { connection: bullMqConnection });
 
-// Initialize state of all jobs
-let lastCounts: JobCounts = {
+function mapToQueueStats(counts: Record<string, number>): QueueStats {
+  return {
+    completed: counts.completed ?? 0,
+    failed: counts.failed ?? 0,
+    waiting: counts.waiting ?? 0,
+    active: counts.active ?? 0,
+    delayed: counts.delayed ?? 0,
+  };
+}
+
+let lastCounts: QueueStats = {
   completed: 0,
   failed: 0,
   waiting: 0,
   active: 0,
   delayed: 0,
 };
-
-// Guard flag to prevent baseline metrics from triggering huge deltas on startup/reboots
 let isFirstRun = true;
 
-// Polls Redis every 5 seconds
+// Background polling loop syncing Redis states to Prometheus metrics
 setInterval(async () => {
   try {
-    const counts = await mathQueue.getJobCounts(
+    const rawCounts = await mathQueue.getJobCounts(
       'waiting',
       'active',
       'completed',
       'failed',
       'delayed'
     );
+    const counts: QueueStats = mapToQueueStats(rawCounts);
 
-    // Update Gauge: Current Queue Depth
-    const currentLength = counts.waiting + counts.active;
-    queueLength.set(currentLength);
+    // Gauge: Active current Queue Depth
+    queueLength.set(counts.waiting + counts.active);
 
-    // Only calculate deltas if this isn't the baseline collection run
     if (!isFirstRun) {
-      // Update Counters: Increment by delta to ensure accurate rates
+      // Counter: Total Jobs Completed
       const completedDelta = counts.completed - lastCounts.completed;
-      if (completedDelta > 0) {
-        totalJobsCompleted.inc(completedDelta);
-      }
+      if (completedDelta > 0) totalJobsCompleted.inc(completedDelta);
 
+      // Compute and increment the failed delta straight from Redis state
+      const failedDelta = counts.failed - lastCounts.failed;
+      if (failedDelta > 0) jobErrorsTotal.inc(failedDelta);
+
+      // Counter: Total Jobs Submitted
       const currentTotal = counts.waiting + counts.active + counts.completed + counts.failed;
       const previousTotal =
         lastCounts.waiting + lastCounts.active + lastCounts.completed + lastCounts.failed;
       const submittedDelta = currentTotal - previousTotal;
 
-      if (submittedDelta > 0) {
-        totalJobsSubmitted.inc(submittedDelta);
-      }
+      if (submittedDelta > 0) totalJobsSubmitted.inc(submittedDelta);
     } else {
-      isFirstRun = false; // Baseline established, safe to track deltas now
+      isFirstRun = false;
     }
 
-    // Update state for next interval
     lastCounts = counts;
-  } catch (err) {
-    console.error('Error polling Redis for metrics:', err);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[METRICS_POLL_ERROR] Failed to fetch queue counts:', message);
   }
 }, 5000);
 
-// Prometheus metrics endpoint
-app.get('/metrics', async (req, res) => {
+// Submission endpoint forcing NO retries so errors register instantly
+app.post('/submit', async (req: Request, res: Response): Promise<void> => {
   try {
-    res.set('Content-Type', register.contentType);
-    res.send(await register.metrics());
-  } catch (err) {
-    res.status(500).send(err);
+    const job = await mathQueue.add(
+      'calculate-primes',
+      { limit: 100000 },
+      {
+        attempts: 1,
+      }
+    );
+
+    totalJobsSubmitted.inc();
+    res.json({ id: job.id });
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Failed to queue job');
   }
 });
 
-// JSON stats endpoint
-app.get('/stats', async (req, res) => {
-  const counts = await mathQueue.getJobCounts(
-    'waiting',
-    'active',
-    'completed',
-    'failed',
-    'delayed'
-  );
-  res.json({
-    queue: 'math-tasks',
-    totalSubmitted: counts.waiting + counts.active + counts.completed + counts.failed,
-    totalCompleted: counts.completed,
-    queueLength: counts.waiting + counts.active,
-    stats: counts,
-  });
+app.get('/stats', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const rawCounts = await mathQueue.getJobCounts(
+      'waiting',
+      'active',
+      'completed',
+      'failed',
+      'delayed'
+    );
+    const counts = mapToQueueStats(rawCounts);
+    res.json({
+      queue: 'math-tasks',
+      queueLength: counts.waiting + counts.active,
+      stats: counts,
+    });
+  } catch (error: unknown) {
+    handleControllerError(res, error, 'Failed to retrieve stats');
+  }
 });
 
 const PORT = process.env.AGGREGATOR_PORT || 3002;
-app.listen(PORT, () => console.warn(`Aggregator (Service C) running on port ${PORT}`));
+app.listen(PORT, () => console.warn(`[SYSTEM] Aggregator running on port ${PORT}`));

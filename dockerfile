@@ -21,6 +21,6 @@ USER appuser
 ENV NODE_ENV=production
 
 # The port is now managed by the environment variable,
-EXPOSE 4001 4002
+EXPOSE 4001 4002 4003
 
-CMD ["npm", "run", "start:api"]
+CMD ["npm", "run"]
