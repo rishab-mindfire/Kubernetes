@@ -5,10 +5,10 @@ metadata:
   labels:
     app: redis
 spec:
-  replicas: 1 # only one instance for this Redis broker
+  replicas: 1
   selector:
     matchLabels:
-      app: redis # Links this deployment to the service below
+      app: redis
   template:
     metadata:
       labels:
@@ -18,13 +18,12 @@ spec:
       - name: redis
         image: redis:7-alpine
         imagePullPolicy: Never
-        # pass the password here directly to secure the instance
         command: ["redis-server", "--requirepass", "password123"]
         ports:
-        - containerPort: 6379 # The port Redis listens on inside the container
+        - containerPort: 6379
         volumeMounts:
         - name: redis-data
-          mountPath: /data # Where Redis stores its data files inside the container
+          mountPath: /data
       volumes:
       - name: redis-data
-        emptyDir: {} # Temporary storage; will be replaced by a PVC for permanent data
+        emptyDir: {}

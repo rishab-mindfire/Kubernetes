@@ -10,7 +10,7 @@ spec:
   selector:
     app: aggregator
   ports:
-    - name: metrics  # Named port for both your API and metrics scraping
+    - name: metrics  # metrics scraping
       protocol: TCP
       port: 4002
       targetPort: 4002

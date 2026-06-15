@@ -23,9 +23,9 @@ spec:
         - name: REDIS_URL
           value: "redis://:password123@redis-service:6379"
         - name: WORKER_METRICS_PORT
-          value: "4003" # Align with the Service port
+          value: "4003"
         ports:
-        - containerPort: 4003 # MUST match the service targetPort
+        - containerPort: 4003
         resources:
           requests:
             cpu: "200m"
