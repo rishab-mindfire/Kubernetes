@@ -4,7 +4,7 @@ metadata:
   name: microservices-ingress
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
-    # Capture group $1 now represents everything after the service prefix
+    # Capture group $1 represents everything after the service prefix
     nginx.ingress.kubernetes.io/rewrite-target: /$1
 spec:
   ingressClassName: nginx
