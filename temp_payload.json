@@ -1,0 +1,6 @@
+﻿{
+  "jobType": "bcrypt",
+  "rounds": 10,
+  "data": "stress-test-workload-payload-2026",
+  "targetLimit": 100000
+}

@@ -17,12 +17,10 @@ spec:
       containers:
       - name: aggregator
         image: my-app-service:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Never
         command: ["npm", "run", "start:aggregator"]
-        env:
-        - name: REDIS_URL
-          value: "redis://:password123@redis-service:6379"
-        - name: AGGREGATOR_PORT
-          value: "4002" # Aggregator port
+        envFrom:
+      - configMapRef:
+          name: app-config
         ports:
         - containerPort: 4002

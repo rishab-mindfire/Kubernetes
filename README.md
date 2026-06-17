@@ -86,12 +86,13 @@ REDIS_URL=redis://:password123@localhost:6379
 # Local Express Server Ports
 API_PORT=3001
 AGGREGATOR_PORT=3002
+WORKER_METRICS_PORT=3003
 
 ```
 
 ### 2. Spin Up Infrastructure Containers
 
-Run the following command to start Redis, Redis Insight, and default configurations without binding conflicts on ports `3001` and `3002`:
+Run the following command to start Redis, Redis Insight, and default configurations without binding conflicts on ports `3001` and `3002` and `3003`:
 
 ```bash
 docker-compose up -d
@@ -169,6 +170,21 @@ kubectl get svc
 
 # Check Ingress routing rules
 kubectl get ingress
+
+# map web port for ngnix
+kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 80:80
+
+# for metrics and charts visualization
+kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090 -n monitoring
+kubectl port-forward svc/monitoring-grafana 5000:80 -n monitoring
+
+#get credentials for grafana
+ $secret = kubectl get secret monitoring-grafana -n monitoring -o jsonpath="{.data.admin-password}"
+[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secret))
+
+# load tesing through file
+.\load_test.ps1
+
 
 ```
 
