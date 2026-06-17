@@ -19,16 +19,13 @@ spec:
         image: my-app-service:latest
         imagePullPolicy: Never
         command: ["npm", "run", "start:worker"]
-
         envFrom:
         - configMapRef:
             name: app-config
         - secretRef:
             name: app-secret
-
         ports:
         - containerPort: 4003
-
         resources:
           requests:
             cpu: "200m"

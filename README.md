@@ -4,15 +4,15 @@ This repository demonstrates a production-ready, multi-service Kubernetes deploy
 
 ---
 
-## Architecture Overview
+##Project Architecture Overview
 
 The application utilizes **path-based routing** through an Ingress Controller to expose specific microservices to the outside world, while keeping backend workers and databases securely isolated within the cluster network.
 
 ```
                     [ Ingress Controller (Port 80) ]
                                    |
-         -----------------------------------------------------
-        |                                                     |
+         -------------------------------------------------------------------------------------------------
+        |                                                     |                                           |
   /api/* (Port 4001)                                 /aggregator/* (Port 4002)
         |                                                     |
  [ api-service ]                                     [ aggregator-service ]
@@ -122,9 +122,9 @@ _Alternatively, if configured in your `package.json`, run all simultaneously:_ `
 
 ---
 
-## Kubernetes Deployment Steps
+### Kubernetes Deployment Steps
 
-### Prerequisites
+## Prerequisites
 
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed and running.
 - `kubectl` CLI configured to point to your Minikube cluster.
@@ -176,7 +176,10 @@ kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 80:80
 
 # for metrics and charts visualization
 kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090 -n monitoring
-kubectl port-forward svc/monitoring-grafana 5000:80 -n monitoring
+kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
+
+# logs for worker service
+kubectl logs -l app=worker -f
 
 #get credentials for grafana
  $secret = kubectl get secret monitoring-grafana -n monitoring -o jsonpath="{.data.admin-password}"
@@ -192,5 +195,5 @@ kubectl port-forward svc/monitoring-grafana 5000:80 -n monitoring
 
 Once the tunnel is active and status checks pass, test the deployment using the production ports via Ingress:
 
-- **API Stats Endpoint:** `http://127.0.0.1/api/stats`
-- **Aggregator Metrics Endpoint:** `http://127.0.0.1/aggregator/metrics`
+- **API Stats Endpoint:** `http://my-app.local/api/stats`
+- **Aggregator Metrics Endpoint:** `http://my-app.local/aggregator/metrics`
