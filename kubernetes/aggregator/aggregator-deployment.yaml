@@ -15,12 +15,12 @@ spec:
         app: aggregator
     spec:
       containers:
-      - name: aggregator
-        image: my-app-service:latest
-        imagePullPolicy: Never
-        command: ["npm", "run", "start:aggregator"]
-        envFrom:
-      - configMapRef:
-          name: app-config
-        ports:
-        - containerPort: 4002
+        - name: aggregator
+          image: my-app-service:latest
+          imagePullPolicy: Never
+          command: ["npm", "run", "start:aggregator"]
+          envFrom:
+            - configMapRef:
+                name: app-config
+          ports:
+            - containerPort: 4002
