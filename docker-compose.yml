@@ -36,6 +36,7 @@ services:
   api:
     build: .
     container_name: api_service
+    command: ["node", "dist/api.js"]
     environment:
       - API_PORT=4001
       - REDIS_URL=redis://:password123@redis:6379
@@ -50,7 +51,7 @@ services:
   worker:
     build: .
     container_name: worker_service
-    command: npm run start:worker
+    command: ["node", "dist/worker.js"]
     environment:
       - REDIS_URL=redis://:password123@redis:6379
     depends_on:
@@ -62,7 +63,7 @@ services:
   aggregator:
     build: .
     container_name: aggregator_service
-    command: npm run start:aggregator
+    command: ["node", "dist/aggregator.js"]
     environment:
       - AGGREGATOR_PORT=4002
       - REDIS_URL=redis://:password123@redis:6379

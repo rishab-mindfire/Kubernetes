@@ -38,32 +38,42 @@ To keep the repository clean and scalable, the Kubernetes manifests have been or
 
 ```text
 .
-├── kubernetes/                  # Kubernetes Manifests
-│   ├── ingress.yaml             # Global Nginx Ingress Routing
-│   ├── api/                     # API Service Manifests
-│   │   ├── deployment.yaml
-│   │   └── service.yaml
-│   ├── aggregator/              # Aggregator Service Manifests
-│   │   ├── deployment.yaml
-│   │   └── service.yaml
-│   ├── worker/                  # Background Worker Manifests
-│   │   ├── deployment.yaml
-│   │   └── service.yaml
-│   └── redis/                   # Redis Infrastructure (Recommended Addition)
-│       ├── deployment.yaml
-│       └── service.yaml
-├── src/                         # TypeScript Application Source
-│   ├── api.ts
-│   ├── aggregator.ts
-│   └── worker.ts
-├── lib/                         # Shared Libraries
-│   ├── metrics.ts
+├── kubernetes/                     # Kubernetes
+│   ├── ingress.yaml                # Global Nginx Ingress Routing
+│   ├── configmap.yaml              # Global configuration env file for kubernetics
+│   ├── api/                        # API Service
+│   │   ├── api-deployment.yaml
+│   │   └── api-service.yaml
+|   |
+│   ├── aggregator/                 # Aggregator Service
+│   │   ├── aggregator-deployment.yaml
+│   │   └── aggregator-service.yaml
+|   |
+│   ├── worker/                      # Background Worker
+│   │   ├── worker-deployment.yaml
+│   │   |── worker-service.yaml
+|   |   └── worker-hpa.yaml
+|   |
+│   |── redis/                       # Redis Infrastructure
+│   |   ├── redis-deployment.yaml
+│   |   |── redis-service.yaml
+|   |   └── redis-pvc.yaml
+|   |
+│   └── monitoring/                   # monitoring services
+|       └── service-monitor.yaml
+|
+├── src/                              # TypeScript & nodeJS Application
+│   ├── api.ts                        # Service A
+│   ├── aggregator.ts                 # Service B
+│   └── worker.ts                     # Service C
+├── lib/                              # Shared Libraries
+│   ├── metrics.ts                    # metrics scraping end point
 │   └── redis.ts
-├── util/                        # Shared Utilities & Types
+├── util/                             # Shared Utilities & Types
 │   ├── errorHandler.ts
 │   └── types.ts
 ├── Dockerfile
-├── docker-compose.yml           # Local Development Orchestration
+├── docker-compose.yml                # Local Development Orchestration
 ├── package.json
 └── .env.example
 
@@ -154,7 +164,12 @@ Deploy all manifests recursively from the structured `kubernetes/` folder:
 
 ```bash
 kubectl apply -f kubernetes/
+```
 
+roll back if any pods need to restart for any services
+
+```bash
+kubectl rollout restart deployment aggregator-deployment api-deployment redis-deployment worker-deployment
 ```
 
 ### 3. Verify the Cluster Status
@@ -170,8 +185,10 @@ kubectl get svc
 
 # Check Ingress routing rules
 kubectl get ingress
+# check for redis PersistentVolumeClaim
+kubectl get pvc
 
-# map web port for ngnix
+# map web port for ngnix ingress
 kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 80:80
 
 # for metrics and charts visualization

@@ -18,7 +18,7 @@ spec:
         - name: aggregator
           image: my-app-service:latest
           imagePullPolicy: Never
-          command: ["npm", "run", "start:aggregator"]
+          command: ["node", "dist/api.js"]
           envFrom:
             - configMapRef:
                 name: app-config

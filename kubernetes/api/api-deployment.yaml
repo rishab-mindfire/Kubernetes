@@ -18,7 +18,7 @@ spec:
       - name: api
         image: my-app-service:latest
         imagePullPolicy: Never
-        command: ["npm", "run", "start:api"]
+        command: ["node", "dist/api.js"]
         envFrom:
         - configMapRef:
             name: app-config

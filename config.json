@@ -4,11 +4,5 @@
     "concurrency": 150,
     "targetUrl": "http://127.0.0.1/api/submit",
     "hostHeader": "my-app.local"
-  },
-  "payload": {
-    "jobType": "bcrypt",
-    "rounds": 10,
-    "data": "stress-test-workload-payload-2026",
-    "targetLimit": 100000
   }
 }

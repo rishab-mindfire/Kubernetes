@@ -18,7 +18,7 @@ spec:
       - name: worker
         image: my-app-service:latest
         imagePullPolicy: Never
-        command: ["npm", "run", "start:worker"]
+        command: ["node", "dist/worker.js"]
         envFrom:
         - configMapRef:
             name: app-config
