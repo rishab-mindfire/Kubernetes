@@ -14,11 +14,20 @@ spec:
       labels:
         app: api
     spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            [
+              "sh",
+              "-c",
+              "until nc -z -w 2 redis-service 6379; do echo 'Waiting for Redis to be reachable...'; sleep 2; done;",
+            ]
       containers:
       - name: api
         image: my-app-service:latest
         imagePullPolicy: Never
-        command: ["npm", "run", "start:api"]
+        command: ["node", "dist/api.js"]
         envFrom:
         - configMapRef:
             name: app-config

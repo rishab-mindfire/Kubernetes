@@ -14,13 +14,22 @@ spec:
       labels:
         app: aggregator
     spec:
+      initContainers:
+        - name: wait-for-redis
+          image: busybox:1.36
+          command:
+            [
+              "sh",
+              "-c",
+              "until nc -z -w 2 redis-service 6379; do echo 'Waiting for Redis to be reachable...'; sleep 2; done;",
+            ]
       containers:
-      - name: aggregator
-        image: my-app-service:latest
-        imagePullPolicy: Never
-        command: ["npm", "run", "start:aggregator"]
-        envFrom:
-      - configMapRef:
-          name: app-config
-        ports:
-        - containerPort: 4002
+        - name: aggregator
+          image: my-app-service:latest
+          imagePullPolicy: Never
+          command: ["node", "dist/api.js"]
+          envFrom:
+            - configMapRef:
+                name: app-config
+          ports:
+            - containerPort: 4002

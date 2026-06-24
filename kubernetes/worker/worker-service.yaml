@@ -10,7 +10,7 @@ spec:
   selector:
     app: worker
   ports:
-    - name: metrics # Prometheus targets this port
+    - name: metrics # Prometheus targets port
       protocol: TCP
       port: 4003
       targetPort: 4003

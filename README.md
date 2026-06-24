@@ -4,15 +4,15 @@ This repository demonstrates a production-ready, multi-service Kubernetes deploy
 
 ---
 
-## Architecture Overview
+##Project Architecture Overview
 
 The application utilizes **path-based routing** through an Ingress Controller to expose specific microservices to the outside world, while keeping backend workers and databases securely isolated within the cluster network.
 
 ```
                     [ Ingress Controller (Port 80) ]
                                    |
-         -----------------------------------------------------
-        |                                                     |
+         -------------------------------------------------------------------------------------------------
+        |                                                     |                                           |
   /api/* (Port 4001)                                 /aggregator/* (Port 4002)
         |                                                     |
  [ api-service ]                                     [ aggregator-service ]
@@ -38,32 +38,42 @@ To keep the repository clean and scalable, the Kubernetes manifests have been or
 
 ```text
 .
-├── kubernetes/                  # Kubernetes Manifests
-│   ├── ingress.yaml             # Global Nginx Ingress Routing
-│   ├── api/                     # API Service Manifests
-│   │   ├── deployment.yaml
-│   │   └── service.yaml
-│   ├── aggregator/              # Aggregator Service Manifests
-│   │   ├── deployment.yaml
-│   │   └── service.yaml
-│   ├── worker/                  # Background Worker Manifests
-│   │   ├── deployment.yaml
-│   │   └── service.yaml
-│   └── redis/                   # Redis Infrastructure (Recommended Addition)
-│       ├── deployment.yaml
-│       └── service.yaml
-├── src/                         # TypeScript Application Source
-│   ├── api.ts
-│   ├── aggregator.ts
-│   └── worker.ts
-├── lib/                         # Shared Libraries
-│   ├── metrics.ts
+├── kubernetes/                     # Kubernetes
+│   ├── ingress.yaml                # Global Nginx Ingress Routing
+│   ├── configmap.yaml              # Global configuration env file for kubernetics
+│   ├── api/                        # API Service
+│   │   ├── api-deployment.yaml
+│   │   └── api-service.yaml
+|   |
+│   ├── aggregator/                 # Aggregator Service
+│   │   ├── aggregator-deployment.yaml
+│   │   └── aggregator-service.yaml
+|   |
+│   ├── worker/                      # Background Worker
+│   │   ├── worker-deployment.yaml
+│   │   |── worker-service.yaml
+|   |   └── worker-hpa.yaml
+|   |
+│   |── redis/                       # Redis Infrastructure
+│   |   ├── redis-deployment.yaml
+│   |   |── redis-service.yaml
+|   |   └── redis-pvc.yaml
+|   |
+│   └── monitoring/                   # monitoring services
+|       └── service-monitor.yaml
+|
+├── src/                              # TypeScript & nodeJS Application
+│   ├── api.ts                        # Service A
+│   ├── aggregator.ts                 # Service B
+│   └── worker.ts                     # Service C
+├── lib/                              # Shared Libraries
+│   ├── metrics.ts                    # metrics scraping end point
 │   └── redis.ts
-├── util/                        # Shared Utilities & Types
+├── util/                             # Shared Utilities & Types
 │   ├── errorHandler.ts
 │   └── types.ts
 ├── Dockerfile
-├── docker-compose.yml           # Local Development Orchestration
+├── docker-compose.yml                # Local Development Orchestration
 ├── package.json
 └── .env.example
 
@@ -118,13 +128,11 @@ npm run dev:worker
 
 ```
 
-_Alternatively, if configured in your `package.json`, run all simultaneously:_ `npm run dev`
-
 ---
 
-## Kubernetes Deployment Steps
+### Kubernetes Deployment Steps
 
-### Prerequisites
+## Prerequisites
 
 - [Minikube](https://minikube.sigs.k8s.io/docs/start/) installed and running.
 - `kubectl` CLI configured to point to your Minikube cluster.
@@ -154,7 +162,24 @@ Deploy all manifests recursively from the structured `kubernetes/` folder:
 
 ```bash
 kubectl apply -f kubernetes/
+```
 
+Deploy everything recursively
+
+```bash
+kubectl apply -f kubernetes/ -R
+```
+
+roll back if any pods need to restart for any services
+
+```bash
+kubectl rollout restart deployment aggregator-deployment api-deployment redis-deployment worker-deployment
+```
+
+stop everything
+
+```bash
+Stop-Process -Name kubectl -Force
 ```
 
 ### 3. Verify the Cluster Status
@@ -170,21 +195,53 @@ kubectl get svc
 
 # Check Ingress routing rules
 kubectl get ingress
+# check for redis PersistentVolumeClaim
+kubectl get pvc
 
-# map web port for ngnix
+# map web port for ngnix ingress
 kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 80:80
 
 # for metrics and charts visualization
 kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090 -n monitoring
-kubectl port-forward svc/monitoring-grafana 5000:80 -n monitoring
+kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
+
+# for api service port forward
+kubectl port-forward service/api-service 4001:4001
+
+# logs for worker service
+kubectl logs -l app=worker -f
+
+# logs for api service
+kubectl logs -l app=api -f
+
+# logs for aggregator service
+kubectl logs -l app=aggregator -f
 
 #get credentials for grafana
  $secret = kubectl get secret monitoring-grafana -n monitoring -o jsonpath="{.data.admin-password}"
 [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secret))
 
-# load tesing through file
-.\load_test.ps1
+## load tesing ApacheBench command
+ab -n 5000 -c 150 -H "Host: my-app.local" http://localhost:4001/api/submit
 
+# or by autocannon can do load test
+npx autocannon -c 150 -a 5000 -m POST http://my-app.local/api/submit
+
+
+#get cpu used % for top node
+kubectl top nodes
+#get based on local node js OS module
+npx nodemon --exec node cpu-logger.js
+
+#get HPA (for worker )
+kubectl get hpa worker-hpa -w
+
+
+#delete all and restart
+kubectl delete deployments --all
+kubectl delete hpa --all
+kubectl delete services --all
+kubectl rollout restart deployment coredns -n kube-system
 
 ```
 
@@ -192,5 +249,5 @@ kubectl port-forward svc/monitoring-grafana 5000:80 -n monitoring
 
 Once the tunnel is active and status checks pass, test the deployment using the production ports via Ingress:
 
-- **API Stats Endpoint:** `http://127.0.0.1/api/stats`
-- **Aggregator Metrics Endpoint:** `http://127.0.0.1/aggregator/metrics`
+- **API Stats Endpoint:** `http://my-app.local/api/stats`
+- **Aggregator Metrics Endpoint:** `http://my-app.local/aggregator/metrics`

@@ -11,7 +11,7 @@ spec:
       - default
   selector:
     matchLabels:
-      app: aggregator          # Finds the service with label 'app: aggregator'
+      app: worker
   endpoints:
   - port: metrics
     path: /metrics
