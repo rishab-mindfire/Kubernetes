@@ -128,8 +128,6 @@ npm run dev:worker
 
 ```
 
-_Alternatively, if configured in your `package.json`, run all simultaneously:_ `npm run dev`
-
 ---
 
 ### Kubernetes Deployment Steps
@@ -166,10 +164,22 @@ Deploy all manifests recursively from the structured `kubernetes/` folder:
 kubectl apply -f kubernetes/
 ```
 
+Deploy everything recursively
+
+```bash
+kubectl apply -f kubernetes/ -R
+```
+
 roll back if any pods need to restart for any services
 
 ```bash
 kubectl rollout restart deployment aggregator-deployment api-deployment redis-deployment worker-deployment
+```
+
+stop everything
+
+```bash
+Stop-Process -Name kubectl -Force
 ```
 
 ### 3. Verify the Cluster Status
@@ -195,16 +205,43 @@ kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 80:80
 kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090 -n monitoring
 kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
 
+# for api service port forward
+kubectl port-forward service/api-service 4001:4001
+
 # logs for worker service
 kubectl logs -l app=worker -f
+
+# logs for api service
+kubectl logs -l app=api -f
+
+# logs for aggregator service
+kubectl logs -l app=aggregator -f
 
 #get credentials for grafana
  $secret = kubectl get secret monitoring-grafana -n monitoring -o jsonpath="{.data.admin-password}"
 [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secret))
 
-# load tesing through file
-.\load_test.ps1
+## load tesing ApacheBench command
+ab -n 5000 -c 150 -H "Host: my-app.local" http://localhost:4001/api/submit
 
+# or by autocannon can do load test
+npx autocannon -c 150 -a 5000 -m POST http://my-app.local/api/submit
+
+
+#get cpu used % for top node
+kubectl top nodes
+#get based on local node js OS module
+npx nodemon --exec node cpu-logger.js
+
+#get HPA (for worker )
+kubectl get hpa worker-hpa -w
+
+
+#delete all and restart
+kubectl delete deployments --all
+kubectl delete hpa --all
+kubectl delete services --all
+kubectl rollout restart deployment coredns -n kube-system
 
 ```
 

@@ -1,8 +1,0 @@
-{
-  "benchmarking": {
-    "totalRequests": 5000,
-    "concurrency": 150,
-    "targetUrl": "http://127.0.0.1/api/submit",
-    "hostHeader": "my-app.local"
-  }
-}
