@@ -12,7 +12,7 @@ spec:
   - host: my-app.local
     http:
       paths:
-      # Matches: /api/status/123
+      # Api secvice port
       - path: /api/(.*)
         pathType: ImplementationSpecific
         backend:
@@ -20,7 +20,7 @@ spec:
             name: api-service
             port:
               number: 4001
-      # Matches: /aggregator/metrics
+      # Matrics service port
       - path: /aggregator/(.*)
         pathType: ImplementationSpecific
         backend:

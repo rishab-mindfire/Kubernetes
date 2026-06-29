@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { Redis } from 'ioredis';
 
 // Construct the URL dynamically to handle the host override
-let redisUrl = process.env.REDIS_URL || 'redis://:password123@localhost:6379';
+let redisUrl = process.env.REDIS_URL || '';
 
 // override to localhost if in development mode
 if (process.env.NODE_ENV === 'development') {

@@ -145,6 +145,28 @@ minikube start
 # Enable Nginx Ingress Controller
 minikube addons enable ingress
 
+# create docker image and inject to kubernetics
+docker build -t my-app-service:v2 . --no-cache
+
+# build file
+docker compose up --build
+
+# Explicitly push it into Minikube
+minikube image load my-app-service:v2 --overwrite=true
+# load image form build file
+minikube image load my-app-service:v2
+
+#check image list
+minikube image ls --format table
+
+#remove other images if there
+ minikube image rm docker.io/library/my-app:latest
+ docker rmi -f docker.io/library/my-app-service:v1
+
+
+# 1. Force kill the pods stuck in ImagePullBackOff loops
+kubectl delete pods --all --grace-period=0 --force
+
 ```
 
 ### 1. Start the Minikube Tunnel
@@ -153,7 +175,6 @@ Because Ingress controllers rely on cloud load balancers, you **must** keep a ro
 
 ```bash
 minikube tunnel
-
 ```
 
 ### 2. Apply Configurations
@@ -168,6 +189,25 @@ Deploy everything recursively
 
 ```bash
 kubectl apply -f kubernetes/ -R
+```
+
+# Add the Prometheus community repo
+
+```base
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+```
+
+# Install the stack
+
+```base
+helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
+```
+
+# check monitoring
+
+```base
+kubectl get pods -n monitoring
 ```
 
 roll back if any pods need to restart for any services
@@ -201,15 +241,19 @@ kubectl get pvc
 # map web port for ngnix ingress
 kubectl port-forward -n ingress-nginx service/ingress-nginx-controller 80:80
 
+# get monitoring services
+kubectl get svc -n monitoring
+
 # for metrics and charts visualization
-kubectl port-forward svc/monitoring-kube-prometheus-prometheus 9090 -n monitoring
-kubectl port-forward svc/monitoring-grafana 3000:80 -n monitoring
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 -n monitoring
+kubectl port-forward svc/prometheus-grafana 3000:80 -n monitoring
 
 # for api service port forward
 kubectl port-forward service/api-service 4001:4001
 
 # logs for worker service
 kubectl logs -l app=worker -f
+kubectl logs -l app=worker -f --max-log-requests=10
 
 # logs for api service
 kubectl logs -l app=api -f
@@ -217,16 +261,24 @@ kubectl logs -l app=api -f
 # logs for aggregator service
 kubectl logs -l app=aggregator -f
 
-#get credentials for grafana
- $secret = kubectl get secret monitoring-grafana -n monitoring -o jsonpath="{.data.admin-password}"
+# get
+kubectl get secrets -n monitoring
+
+# get credentials for grafana
+# 1. Fetch the secret and store it in the variable
+$secret = kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}"
+
+# 2. Decode the variable
 [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secret))
 
-## load tesing ApacheBench command
+## load tesing ApacheBench command (5000 req on 150 cuncurrency)
 ab -n 5000 -c 150 -H "Host: my-app.local" http://localhost:4001/api/submit
 
 # or by autocannon can do load test
-npx autocannon -c 150 -a 5000 -m POST http://my-app.local/api/submit
+npx autocannon -c 150 -a 500 -m POST http://my-app.local/api/submit
 
+#log
+kubectl logs -f -l app=worker
 
 #get cpu used % for top node
 kubectl top nodes

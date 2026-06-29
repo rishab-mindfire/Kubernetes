@@ -1,9 +1,8 @@
 # Stage 1: Builder
 FROM node:20-alpine AS builder
 WORKDIR /app
-COPY package*.json ./
 
-# Install ci to use clean build file before new build creation
+COPY package*.json ./
 RUN npm ci
 
 COPY . .
@@ -11,25 +10,20 @@ RUN npm run build
 
 # Stage 2: Runner
 FROM node:20-alpine AS runner
-
-# Set production environment as production
-ENV NODE_ENV=production
-
 WORKDIR /app
 
-# Install only production dependencies
+ENV NODE_ENV=production
+
+# Ensure both package.json and package-lock.json are copied
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
-# Copy only the compiled dist folder from the builder stage
-COPY --from=builder /app/dist ./dist
-
-# Create a non-root user for security
+# Create non-root user first
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Copy from builder AND set ownership in a single layer
+COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
+
+# Switch to the non-root user
 USER appuser
 
-# Expose the application ports
-EXPOSE 4001 4002 4003
-
-# Run the app directly by serving build file from dist
-CMD ["node", "dist/api.js"]
