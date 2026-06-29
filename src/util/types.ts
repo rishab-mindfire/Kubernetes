@@ -1,4 +1,13 @@
-import type { Queue } from 'bullmq';
+import type { ConnectionOptions } from 'bullmq';
+import { redisConnection } from '../lib/redis.js';
 
-// Dynamically extract the JobCounts type from the BullMQ Queue method
-export type JobCounts = Awaited<ReturnType<Queue['getJobCounts']>>;
+// redisConnection is an instance of Redis from ioredis
+export const bullMqConnection = redisConnection as unknown as ConnectionOptions;
+
+export interface QueueStats {
+  completed: number;
+  failed: number;
+  waiting: number;
+  active: number;
+  delayed: number;
+}

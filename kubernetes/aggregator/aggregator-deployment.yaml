@@ -25,9 +25,9 @@ spec:
             ]
       containers:
         - name: aggregator
-          image: my-app-service:latest
-          imagePullPolicy: Never
-          command: ["node", "dist/api.js"]
+          image: my-app-service:v2
+          imagePullPolicy: IfNotPresent
+          command: ["node", "dist/aggregator.js"]
           envFrom:
             - configMapRef:
                 name: app-config

@@ -1,80 +1,119 @@
 import 'dotenv/config';
 import express from 'express';
-import { Worker, Job } from 'bullmq';
+import { Worker } from 'bullmq';
+import { Worker as ThreadWorker } from 'worker_threads';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { redisConnection } from './lib/redis.js';
 import {
-  totalJobsCompleted,
-  jobErrorsTotal,
-  jobProcessingTime,
-  setupMetricsRoute,
+  incJobsProcessed,
+  incJobErrors,
+  recordProcessingTime,
+  buildMetricsText,
 } from './lib/metrics.js';
-import { bullMqConnection } from './lib/caseDbType.js';
 
-const app = express();
-setupMetricsRoute(app);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const METRICS_PORT = process.env.WORKER_METRICS_PORT || 3003;
-app.listen(METRICS_PORT, () => {
-  console.info(`[SYSTEM] Worker metrics server listening on port ${METRICS_PORT}`);
-});
+const PORT = process.env.WORKER_METRICS_PORT || 3003;
+const JOB_TYPE = 'math-tasks';
 
-const yieldLoop = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+await redisConnection.sadd('metrics:known_job_types', JOB_TYPE);
 
-const worker = new Worker(
+// Connection Parser
+const connectionOptions = process.env.REDIS_URL
+  ? { url: process.env.REDIS_URL }
+  : { host: process.env.REDIS_HOST };
+
+const logTarget = process.env.REDIS_URL ? 'REDIS_URL config string' : `[${connectionOptions.host}]`;
+
+// Background CPU Work Orchestrator
+function runCpuThread(scriptPath = '', limit = 100000) {
+  return new Promise((resolve, reject) => {
+    const thread = new ThreadWorker(path.resolve(__dirname, scriptPath), {
+      workerData: { limit },
+    });
+
+    thread.on('message', (msg) => resolve(msg.result));
+    thread.on('error', reject);
+    thread.on('exit', (code) => {
+      if (code !== 0) reject(new Error(`Thread processing failed with exit code ${code}`));
+    });
+  });
+}
+
+// BullMQ Queue Consumer
+const queueWorker = new Worker(
   'math-tasks',
-  async (job: Job) => {
-    console.info(`[TASK_PROCESSING] ID: ${job.id} | Attempt: ${job.attemptsMade + 1}`);
-    const end = jobProcessingTime.startTimer();
+  async (job) => {
+    console.warn(`[WORKER] Ingesting Job ${job.id} | Type: ${job.name}`);
+
+    const startTime = performance.now();
+    const limit = job.data.limit || 100000;
 
     try {
-      // Simulate Random 50% Failure
-      if (Math.random() < 0.5) {
-        throw new Error('Simulated random failure');
-      }
+      // Log the tracking state to the known job types set dynamically
+      await redisConnection.sadd('metrics:known_job_types', job.name);
 
-      const limit = job.data.limit;
-      let count = 0;
+      // Route processing tasks straight into the background worker thread
+      const result = await runCpuThread('./thread/prime.worker.js', limit);
+      const durationSeconds = (performance.now() - startTime) / 1000;
 
-      for (let i = 2; i < limit; i++) {
-        if (i % 5000 === 0) await yieldLoop();
-        let isPrime = true;
-        const sqrt = Math.sqrt(i);
-        for (let j = 2; j <= sqrt; j++) {
-          if (i % j === 0) {
-            isPrime = false;
-            break;
-          }
-        }
-        if (isPrime) count++;
-      }
+      // Atomically pipeline success records directly to your custom metrics engine
+      await incJobsProcessed(job.name);
+      await recordProcessingTime(job.name, durationSeconds);
 
-      totalJobsCompleted.inc();
-      console.info(`[TASK_DONE] ID: ${job.id} | Prime count: ${count}`);
-      return { count };
-    } catch (err: unknown) {
-      jobErrorsTotal.inc();
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`[TASK_FAILED] ID: ${job.id} | Error: ${message}`);
-      throw err;
-    } finally {
-      end();
+      return { success: true, result };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown pipeline error';
+      console.error(`[WORKER_ERROR] Job ${job.id} breached execution limits:`, errorMessage);
+
+      // Update job failure name counter dynamically in Redis
+      await incJobErrors(job.name);
+
+      // Rethrow to allow BullMQ to handle proper retry intervals
+      throw error;
     }
   },
   {
-    connection: bullMqConnection,
-    concurrency: 1,
-    removeOnComplete: { count: 100 },
-    removeOnFail: { count: 100 },
-    limiter: { max: 100, duration: 1000 },
+    connection: connectionOptions,
+    concurrency: 4,
   }
 );
 
-worker.on('ready', () => console.info('[QUEUE_CONNECTION] Worker ready.'));
-worker.on('active', (job) => console.info(`[QUEUE_PROCESS] Job ${job.id} active`));
-worker.on('failed', (job: Job | undefined, err: Error) => {
-  console.error(`[QUEUE_PROCESS] Job ${job?.id} has permanently failed:`, err.message);
+// Server
+const app = express();
+
+// Simple health probe
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'UP', worker: 'active' });
 });
 
-process.on('SIGTERM', async () => {
-  await worker.close();
-  process.exit(0);
+// Expose standard /metrics endpoint for Prometheus scraping
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', 'text/plain; version=0.0.4');
+    const metricsText = await buildMetricsText();
+    res.status(200).send(metricsText);
+  } catch (err) {
+    console.error('[METRICS_ENDPOINT_ERROR]', err);
+    res.status(500).send('Error rendering metrics');
+  }
 });
+
+app.listen(PORT, () => {
+  console.warn(`[SYSTEM] Worker runtime actively listening on port ${PORT}`);
+  console.warn(`[SYSTEM] Monitoring BullMQ queue targeting cluster Redis via ${logTarget}`);
+});
+
+//KUBERNETES SIGTERM GRACEFUL SHUTDOWN
+const shutdown = async (signal = 'SIGTERM') => {
+  console.warn(`[SHUTDOWN] Received ${signal}. Starting graceful cleanup sequence...`);
+  await queueWorker.close();
+  console.warn('[SHUTDOWN] BullMQ listener successfully closed.');
+  await redisConnection.quit();
+  console.warn('[SHUTDOWN] Disconnected from Redis cluster network cleanly.');
+  process.exit(0);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

@@ -4,14 +4,14 @@ metadata:
   name: aggregator-monitor
   namespace: monitoring
   labels:
-    release: monitoring
+    release: prometheus
 spec:
   namespaceSelector:
     matchNames:
       - default
   selector:
     matchLabels:
-      app: worker
+      app: aggregator
   endpoints:
   - port: metrics
     path: /metrics
