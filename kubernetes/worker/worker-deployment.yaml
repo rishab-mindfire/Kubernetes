@@ -14,9 +14,10 @@ spec:
       labels:
         app: worker
     spec:
+      terminationGracePeriodSeconds: 60
       containers:
       - name: worker
-        image: my-app-service:v2
+        image: my-app-service:v1.1.1
         imagePullPolicy: IfNotPresent
         command: ["node", "dist/worker.js"]
         envFrom:

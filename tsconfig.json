@@ -12,6 +12,7 @@
     /* Strictness & Safety */
     "strict": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleDetection": "force",

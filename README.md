@@ -13,11 +13,11 @@ The application utilizes **path-based routing** through an Ingress Controller to
                                    |
          -------------------------------------------------------------------------------------------------
         |                                                     |                                           |
-  /api/* (Port 4001)                                 /aggregator/* (Port 4002)
-        |                                                     |
- [ api-service ]                                     [ aggregator-service ]
-        |                                                     |
-         -----------------------> [ Redis ] <-----------------
+  /api/* (Port 4001)                                 /aggregator/* (Port 4002)                            |
+        |                                                     |                                           |
+ [ api-service ]                                     [ aggregator-service ]                               |
+        |                                                     |                                           |
+         -----------------------> [ Redis ] <------------------------------------------------------------->
                                      ^
                                      |
                               [ worker-service ]
@@ -146,25 +146,24 @@ minikube start
 minikube addons enable ingress
 
 # create docker image and inject to kubernetics
-docker build -t my-app-service:v2 . --no-cache
+docker build -t my-app-service:v1 . --no-cache
 
 # build file
 docker compose up --build
 
-# Explicitly push it into Minikube
-minikube image load my-app-service:v2 --overwrite=true
-# load image form build file
-minikube image load my-app-service:v2
+# Explicitly push image it into Minikube
+minikube image load my-app-service:v1 --overwrite=true
 
 #check image list
 minikube image ls --format table
 
-#remove other images if there
- minikube image rm docker.io/library/my-app:latest
- docker rmi -f docker.io/library/my-app-service:v1
+#remove other images if there any extra version of app
+minikube image rm docker.io/library/my-app-service:v1
+minikube image rm docker.io/library/my-app-service:v2
+minikube image rm docker.io/library/my-app-service:v3
 
 
-# 1. Force kill the pods stuck in ImagePullBackOff loops
+# Force kill the pods stuck in ImagePullBackOff loops
 kubectl delete pods --all --grace-period=0 --force
 
 ```
@@ -193,20 +192,20 @@ kubectl apply -f kubernetes/ -R
 
 # Add the Prometheus community repo
 
-```base
+```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 ```
 
 # Install the stack
 
-```base
+```bash
 helm install prometheus prometheus-community/kube-prometheus-stack -n monitoring --create-namespace
 ```
 
 # check monitoring
 
-```base
+```bash
 kubectl get pods -n monitoring
 ```
 
@@ -269,10 +268,10 @@ kubectl get secrets -n monitoring
 $secret = kubectl get secret prometheus-grafana -n monitoring -o jsonpath="{.data.admin-password}"
 
 # 2. Decode the variable
-[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($secret))
+[System.Text.Encoding]::UTF8.GetString([System.Convert]::Frombash64String($secret))
 
 ## load tesing ApacheBench command (5000 req on 150 cuncurrency)
-ab -n 5000 -c 150 -H "Host: my-app.local" http://localhost:4001/api/submit
+ab -n 500 -c 150 -H "Host: my-app.local" http://localhost:4001/api/submit
 
 # or by autocannon can do load test
 npx autocannon -c 150 -a 500 -m POST http://my-app.local/api/submit

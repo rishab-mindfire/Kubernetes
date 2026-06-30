@@ -2,7 +2,7 @@ import { parentPort, workerData } from 'worker_threads';
 
 function calculatePrimes(limit: number): number {
   if (limit < 2) return 0;
-  let count = 1; // Covers 2
+  let count = 1;
 
   for (let i = 3; i <= limit; i += 2) {
     let isPrime = true;

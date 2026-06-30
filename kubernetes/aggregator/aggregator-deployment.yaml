@@ -25,12 +25,14 @@ spec:
             ]
       containers:
         - name: aggregator
-          image: my-app-service:v2
+          image: my-app-service:v1.1.1
           imagePullPolicy: IfNotPresent
           command: ["node", "dist/aggregator.js"]
           envFrom:
             - configMapRef:
                 name: app-config
+            - secretRef:
+                name: app-secret
           ports:
             - containerPort: 4002
           resources:
