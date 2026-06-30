@@ -4,6 +4,9 @@
   "description": "A kubernate project",
   "main": "index.js",
   "type": "module",
+  "overrides": {
+    "ioredis": "5.10.1"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prebuild": "rimraf dist",
@@ -25,7 +28,7 @@
     "bullmq": "^5.78.0",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "ioredis": "^5.11.1",
+    "ioredis": "5.10.1",
     "prebuild": "^13.0.1",
     "prom-client": "^15.1.3",
     "redis": "^6.0.0"

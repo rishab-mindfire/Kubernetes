@@ -18,7 +18,7 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev --ignore-scripts
 
-# Create non-root user first
+# Create non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 # Copy from builder AND set ownership in a single layer

@@ -6,7 +6,6 @@ data:
   NODE_ENV: production
   REDIS_HOST: redis-service
   REDIS_PORT: "6379"
-  REDIS_URL: "redis://:password123@redis-service:6379"
   API_PORT: "4001"
   AGGREGATOR_PORT: "4002"
-  WORKER_METRICS_PORT: "4003"
+  WORKER_PORT: "4003"

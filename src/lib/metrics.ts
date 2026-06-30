@@ -1,6 +1,6 @@
 import client from 'prom-client';
 import { type Express } from 'express';
-import { redisConnection } from './redis.js';
+import { redisConnection } from '../connection/redis.js';
 
 // Reference global Prometheus registry
 const register = client.register;
@@ -40,33 +40,25 @@ export async function recordProcessingTime(
   await pipeline.exec();
 }
 
-/**
- * Utility helper to safely pull and cast a numeric string from Redis
- */
+// Utility helper to safely pull and cast a numeric string from Redis
 export async function redisNum(key = '') {
   const value = await redisConnection.get(key);
   return value ? parseInt(value, 10) : 0;
 }
 
-/**
- * Fetches all active job names recorded in our shared tracking set
- */
+// Fetches all active job names recorded in our shared tracking set
 export async function getJobTypes() {
   return await redisConnection.smembers('metrics:known_job_types');
 }
 
-/**
- * Increments the submission tracking counter inside Redis for a specific job name
- */
+// Increments the submission tracking counter inside Redis for a specific job name
 export async function incJobsSubmitted(jobType = '') {
   if (!jobType) return;
   await redisConnection.sadd('metrics:known_job_types', jobType);
   await redisConnection.incr(`metrics:jobs_submitted_total:${jobType}`);
 }
 
-/**
- * Compiles system runtime parameters and Redis queues into a Prometheus string stream
- */
+// Compiles system runtime parameters and Redis queues into a Prometheus string stream
 export async function buildMetricsText() {
   // Grab prom-client native system/CPU tracking data
   const systemMetrics = await register.metrics();
@@ -101,10 +93,7 @@ export async function buildMetricsText() {
   return `${systemMetrics}\n${customMetrics}`;
 }
 
-/**
- * Express middleware route generator to bind the /metrics scraper endpoint cleanly
- * Uses a default parameter assignment to accept an Express application instance safely
- */
+// Express middleware route generator to bind the /metrics scraper endpoint
 export function setupMetricsRoute(app = {} as Express) {
   app.get('/metrics', async (req, res) => {
     try {

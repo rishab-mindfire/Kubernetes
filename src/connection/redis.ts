@@ -4,9 +4,8 @@ import { Redis } from 'ioredis';
 // Construct the URL dynamically to handle the host override
 let redisUrl = process.env.REDIS_URL || '';
 
-// override to localhost if in development mode
+// override to localhost in development mode
 if (process.env.NODE_ENV === 'development') {
-  // Replace the host part 'redis' with 'localhost' in the connection string
   redisUrl = redisUrl.replace('@redis:', '@localhost:');
 }
 
@@ -21,7 +20,7 @@ redisConnection.on('error', (err) => {
   console.error('CRITICAL Redis Error:', err);
 });
 
-// a test command to see if it actually works
+// test command to see if it actually works
 redisConnection
   .info()
   .then(() => {

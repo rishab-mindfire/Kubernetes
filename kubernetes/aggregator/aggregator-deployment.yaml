@@ -25,11 +25,27 @@ spec:
             ]
       containers:
         - name: aggregator
-          image: my-app-service:v2
+          image: my-app-service:v1.1.3
           imagePullPolicy: IfNotPresent
           command: ["node", "dist/aggregator.js"]
           envFrom:
             - configMapRef:
                 name: app-config
+            - secretRef:
+                name: app-secret
           ports:
             - containerPort: 4002
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 4002
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
