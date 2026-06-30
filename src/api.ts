@@ -17,7 +17,6 @@ app.post('/submit', async (req, res) => {
   try {
     // Submit to BullMQ
     const job = await mathQueue.add('calculate-primes', { limit: 100000 });
-
     //  increment the submission metric
     await incJobsSubmitted('calculate-primes');
 
@@ -37,7 +36,7 @@ app.get('/status/:id', async (req, res) => {
   }
 });
 
-// Simple health probe
+// health probe
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', worker: 'active' });
 });

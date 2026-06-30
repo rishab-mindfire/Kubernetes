@@ -1,6 +1,6 @@
 import client from 'prom-client';
 import { type Express } from 'express';
-import { redisConnection } from './redis.js';
+import { redisConnection } from '../connection/redis.js';
 
 // Reference global Prometheus registry
 const register = client.register;

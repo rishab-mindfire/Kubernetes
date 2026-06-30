@@ -96,7 +96,7 @@ REDIS_URL=redis://:password123@localhost:6379
 # Local Express Server Ports
 API_PORT=3001
 AGGREGATOR_PORT=3002
-WORKER_METRICS_PORT=3003
+WORKER_PORT=3003
 
 ```
 

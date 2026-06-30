@@ -20,7 +20,7 @@ setInterval(async () => {
     const completedDelta = currentCounts.completed - lastCounts.completed;
     const failedDelta = currentCounts.failed - lastCounts.failed;
 
-    // Use your Redis-backed helpers instead of prom-client counters
+    // Use Redis-backed helpers instead of prom-client counters
     if (completedDelta > 0) {
       await incJobsProcessed('math-tasks');
     }
